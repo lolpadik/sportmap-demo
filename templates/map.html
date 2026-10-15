@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+<h2 class="mb-4"><i class="ph ph-map-pin"></i> {{ t.map }}</h2>
+
+<div class="d-flex flex-wrap gap-2 mb-2">
+    <button class="btn btn-outline-warning btn-sm city-btn active" data-city="all">{{ t.all_cities }}</button>
+    <button class="btn btn-outline-warning btn-sm city-btn" data-city="Минск">{{ t.city_minsk }}</button>
+    <button class="btn btn-outline-warning btn-sm city-btn" data-city="Гомель">{{ t.city_gomel }}</button>
+    <button class="btn btn-outline-warning btn-sm city-btn" data-city="Могилёв">{{ t.city_mogilev }}</button>
+    <button class="btn btn-outline-warning btn-sm city-btn" data-city="Брест">{{ t.city_brest }}</button>
+    <button class="btn btn-outline-warning btn-sm city-btn" data-city="Гродно">{{ t.city_grodno }}</button>
+    <button class="btn btn-outline-warning btn-sm city-btn" data-city="Витебск">{{ t.city_vitebsk }}</button>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-2">
+    <button class="btn btn-outline-info btn-sm sport-btn active" data-sport="all">{{ t.all_sports }}</button>
+    <button class="btn btn-outline-info btn-sm sport-btn" data-sport="⚽ Футбол">{{ t.sport_football }}</button>
+    <button class="btn btn-outline-info btn-sm sport-btn" data-sport="🏀 Баскетбол">{{ t.sport_basketball }}</button>
+    <button class="btn btn-outline-info btn-sm sport-btn" data-sport="🏐 Волейбол">{{ t.sport_volleyball }}</button>
+    <button class="btn btn-outline-info btn-sm sport-btn" data-sport="🏒 Хоккей">{{ t.sport_hockey }}</button>
+    <button class="btn btn-outline-info btn-sm sport-btn" data-sport="🎾 Теннис">{{ t.sport_tennis }}</button>
+    <button class="btn btn-outline-info btn-sm sport-btn" data-sport="🏋️ Воркаут">{{ t.sport_workout }}</button>
+    <button class="btn btn-outline-info btn-sm sport-btn" data-sport="🛹 Скейтбординг">{{ t.sport_skate }}</button>
+    <button class="btn btn-outline-info btn-sm sport-btn" data-sport="🏃 Бег">{{ t.sport_run }}</button>
+</div>
+
+<div class="mb-3" style="position:relative;">
+    <i class="ph ph-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;z-index:10;"></i>
+    <input type="text" id="searchInput" class="form-control" placeholder="{{ t.search }}" autocomplete="off" style="padding-left:40px;">
+    <div id="searchSuggestions" style="display:none;position:absolute;top:100%;left:0;background:#fff;color:#000;border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;z-index:1000;width:100%;box-shadow:0 4px 10px rgba(0,0,0,0.3);"></div>
+</div>
+
+<div class="alert alert-info mt-2 mb-3" role="alert">
+    <i class="ph ph-info"></i> {{ t.click_map }}
+</div>
+
+<div id="map" style="height: 500px; border-radius: 15px;"></div>
+
+{% if user %}
+<button class="btn btn-warning mt-2" data-bs-toggle="modal" data-bs-target="#suggestModal"><i class="ph ph-plus-circle"></i> {{ t.suggest }}</button>
+{% endif %}
+</div>
+
+{% if user %}
+<div class="modal fade" id="suggestModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="/suggest_ground">
+      <div class="modal-content">
+        <div class="modal-header"><h5>{{ t.suggest }}</h5></div>
+        <div class="modal-body">
+            <input type="text" name="name" class="form-control mb-2" placeholder="Название" required>
+            <select name="sport_type" class="form-control mb-2" required>
+                <option value="">Выберите вид спорта</option>
+                <option value="⚽ Футбол">{{ t.sport_football }}</option>
+                <option value="🏀 Баскетбол">{{ t.sport_basketball }}</option>
+                <option value="🏐 Волейбол">{{ t.sport_volleyball }}</option>
+                <option value="🏒 Хоккей">{{ t.sport_hockey }}</option>
+                <option value="🎾 Теннис">{{ t.sport_tennis }}</option>
+                <option value="🏸 Бадминтон">🏸 Бадминтон</option>
+                <option value="🏓 Настольный теннис">🏓 Настольный теннис</option>
+                <option value="🥋 Единоборства">🥋 Единоборства</option>
+                <option value="🏋️ Воркаут">{{ t.sport_workout }}</option>
+                <option value="🛹 Скейтбординг">{{ t.sport_skate }}</option>
+                <option value="🏃 Бег">{{ t.sport_run }}</option>
+                <option value="🚴 Велоспорт">🚴 Велоспорт</option>
+                <option value="🏊 Плавание">🏊 Плавание</option>
+            </select>
+            <input type="text" name="address" class="form-control mb-2" placeholder="Адрес" required>
+            <input type="text" id="latInput" name="lat" class="form-control mb-2" placeholder="Координаты (кликни на карту)" readonly required>
+            <input type="text" id="lonInput" name="lon" class="form-control mb-2" placeholder="Координаты (кликни на карту)" readonly required>
+            <textarea name="description" class="form-control mb-2" placeholder="Описание"></textarea>
+        </div>
+        <div class="modal-footer"><button class="btn btn-success"><i class="ph ph-check"></i> {{ t.send }}</button></div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<script src="https://api-maps.yandex.ru/2.1/?apikey=3f0a3f83-4f48-4378-9a0f-6ac3a7d2d9a8&lang=ru_RU" type="text/javascript"></script>
+<script type="text/javascript">
+    ymaps.ready(function () {
+        var cityCoords = {
+            'Минск': [53.9, 27.56],
+            'Гомель': [52.43, 31.0],
+            'Могилёв': [53.9, 30.33],
+            'Брест': [52.1, 23.7],
+            'Гродно': [53.68, 23.83],
+            'Витебск': [55.19, 30.2]
+        };
+        
+        var allGrounds = {{ grounds_json | safe }};
+        var currentCity = 'all';
+        var currentSport = 'all';
+        var searchText = '';
+        
+        var userCity = "{{ user.city if user else 'Минск' }}";
+        var startCenter = cityCoords[userCity] || [53.9, 27.56];
+        var startZoom = (userCity && userCity !== 'Минск') ? 12 : 7;
+        var map = new ymaps.Map('map', { center: startCenter, zoom: startZoom });
+        
+        if (userCity && userCity !== 'Минск') {
+            currentCity = userCity;
+            document.querySelectorAll('.city-btn').forEach(function(b) {
+                b.classList.remove('active');
+                if (b.dataset.city === userCity) b.classList.add('active');
+            });
+        }
+        
+        function showGrounds() {
+            map.geoObjects.removeAll();
+            var s = searchText.toLowerCase();
+            var filtered = allGrounds.filter(function(g) {
+                var cityMatch = currentCity === 'all' || g.city === currentCity;
+                var sportMatch = currentSport === 'all' || g.sport_type.indexOf(currentSport) !== -1;
+                var searchMatch = !s || g.address.toLowerCase().indexOf(s) !== -1 || g.name.toLowerCase().indexOf(s) !== -1;
+                return cityMatch && sportMatch && searchMatch;
+            });
+            filtered.forEach(function(g) {
+                var color, status;
+                if (g.has_active) { color = 'islands#greenCircleIcon'; status = '🟢 Идёт игра'; }
+                else if (g.has_upcoming) { color = 'islands#yellowCircleIcon'; status = '🟡 Предстоит игра'; }
+                else { color = 'islands#blueCircleIcon'; status = '🔵 Нет игр'; }
+                var pm = new ymaps.Placemark([g.lat, g.lon], {
+                    balloonContent: '<b>' + g.name + '</b><br><i>' + g.sport_type + '</i><br>' + g.address + '<br>' + status + '<br><a href="/ground/' + g.id + '?lang={{ lang }}">Подробнее</a>'
+                }, { preset: color });
+                map.geoObjects.add(pm);
+            });
+        }
+        
+        showGrounds();
+        
+        document.querySelectorAll('.city-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.city-btn').forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                currentCity = this.dataset.city;
+                showGrounds();
+                if (currentCity !== 'all') map.setCenter(cityCoords[currentCity], 12);
+                else map.setCenter([53.9, 27.56], 7);
+            });
+        });
+        
+        document.querySelectorAll('.sport-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.sport-btn').forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                currentSport = this.dataset.sport;
+                showGrounds();
+            });
+        });
+        
+        var searchInput = document.getElementById('searchInput');
+        var suggestionsDiv = document.getElementById('searchSuggestions');
+        
+        function hideSuggestions() { suggestionsDiv.style.display = 'none'; }
+        
+        searchInput.addEventListener('input', function() {
+            searchText = this.value;
+            showGrounds();
+            var s = searchText.toLowerCase();
+            var matches = allGrounds.filter(function(g) {
+                return g.address.toLowerCase().indexOf(s) !== -1 || g.name.toLowerCase().indexOf(s) !== -1;
+            });
+            if (matches.length > 0 && s) {
+                suggestionsDiv.innerHTML = '';
+                matches.slice(0, 5).forEach(function(g) {
+                    var div = document.createElement('div');
+                    div.style.padding = '8px 12px';
+                    div.style.cursor = 'pointer';
+                    div.style.borderBottom = '1px solid #eee';
+                    div.style.transition = 'background 0.15s';
+                    div.textContent = g.address + ' - ' + g.name;
+                    div.addEventListener('mouseenter', function() { this.style.background = '#e2e8f0'; });
+                    div.addEventListener('mouseleave', function() { this.style.background = ''; });
+                    div.addEventListener('click', function() {
+                        searchInput.value = g.address;
+                        searchText = g.address;
+                        showGrounds();
+                        hideSuggestions();
+                        map.setCenter([g.lat, g.lon], 15);
+                    });
+                    suggestionsDiv.appendChild(div);
+                });
+                suggestionsDiv.style.display = 'block';
+            } else { hideSuggestions(); }
+        });
+        
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                hideSuggestions();
+                searchText = this.value;
+                showGrounds();
+                var s = searchText.toLowerCase();
+                var found = allGrounds.filter(function(g) {
+                    return g.address.toLowerCase().indexOf(s) !== -1 || g.name.toLowerCase().indexOf(s) !== -1;
+                });
+                if (found.length > 0) { map.setCenter([found[0].lat, found[0].lon], 15); }
+                else if (s) { alert('Адрес не найден'); }
+            }
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (e.target !== searchInput && e.target.parentNode !== suggestionsDiv) { hideSuggestions(); }
+        });
+        
+        map.events.add('click', function(e) {
+            var coords = e.get('coords');
+            document.getElementById('latInput').value = coords[0].toFixed(6);
+            document.getElementById('lonInput').value = coords[1].toFixed(6);
+            var modal = new bootstrap.Modal(document.getElementById('suggestModal'));
+            modal.show();
+        });
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
